@@ -1,28 +1,55 @@
-# Drive Access Manager
+# Drive Access Manager - Nuclear Mode
 
-Google Apps Script to manage and audit sharing permissions across your entire Google Drive.
+Google Apps Script to remove ALL sharing permissions from your entire Google Drive (40k+ files).
 
-## Features
+## What It Does
 
-- **Scan**: Audit all 40k+ files to see who has access
-- **Report**: Generate spreadsheet with all sharing details
-- **Bulk Remove**: Remove all external sharing at once
-- **Selective Manage**: Choose which permissions to revoke
+- **Removes "Anyone with link"** → Makes files Restricted
+- **Removes all Editors** (except owner)
+- **Removes all Viewers** (except owner)
+- **Logs everything** to a spreadsheet for audit trail
+- **Handles 40k+ files** via automatic batching and triggers
 
 ## Setup
 
-1. Install CLASP: `npm install -g @google/clasp`
-2. Login: `clasp login`
-3. Create project: `clasp create --type sheets --title "Drive Access Manager"`
-4. Push code: `clasp push`
-5. Open: `clasp open`
+```bash
+# 1. Install CLASP globally
+npm install -g @google/clasp
+
+# 2. Login to Google
+clasp login
+
+# 3. Create the Apps Script project (bound to a new Sheet)
+clasp create --type sheets --title "Drive Access Manager"
+
+# 4. Push the code
+clasp push
+
+# 5. Open the Sheet
+clasp open
+```
 
 ## Usage
 
-After deploying, open the Google Sheet and use the **Drive Access Manager** menu.
+1. Open the Google Sheet
+2. Click menu: **Drive Access Manager → Start Nuclear Mode**
+3. Confirm the warning dialog
+4. Script runs automatically in background (check "Stats" sheet for progress)
+5. You'll receive an email when complete
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Resumable** | Saves progress, can stop/start anytime |
+| **Batched** | Processes ~1000 files per 5-min run |
+| **Auto-trigger** | Continues automatically until done |
+| **Full logging** | Every removed permission logged with file details |
+| **Email notification** | Get notified when complete |
 
 ## OAuth Scopes Required
 
-- `drive` - Full Drive access to read/modify permissions
-- `drive.metadata` - Read file metadata
-- `spreadsheets` - Create reports in Sheets
+- `drive` - Full Drive access to modify permissions
+- `spreadsheets` - Log results to the bound Sheet
+- `gmail.send` - Send completion notification email
+- `script.scriptapp` - Create time-based triggers
