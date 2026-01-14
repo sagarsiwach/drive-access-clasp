@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# CLASP credentials (NEVER commit these)
+.clasprc.json
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
