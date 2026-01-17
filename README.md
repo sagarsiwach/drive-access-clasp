@@ -25,14 +25,13 @@ cd drive-access-clasp
 1. Go to [console.cloud.google.com](https://console.cloud.google.com/)
 2. Create new project → Name it anything
 3. **Enable API**: APIs & Services → Library → Search "Google Drive API" → Enable
-4. **OAuth Consent**: APIs & Services → OAuth consent screen
-   - Select "External" → Create
-   - App name: anything, emails: yours
-   - Scopes: Add `https://www.googleapis.com/auth/drive`
-   - Test users: Add your Gmail address
-5. **Create Credentials**: APIs & Services → Credentials
-   - Create OAuth client ID → Desktop app
-   - Download JSON → Save as `credentials.json` in this folder
+4. **Configure OAuth** (via Google Auth Platform in sidebar):
+   - **Branding**: Set app name and your email
+   - **Audience**: Set to External, add your Gmail as test user
+   - **Data Access**: Add scope `https://www.googleapis.com/auth/drive`
+   - **Clients**: Create Desktop app → Download JSON → Save as `credentials.json`
+
+See [SETUP_GOOGLE_CLOUD.md](SETUP_GOOGLE_CLOUD.md) for detailed screenshots.
 
 ### 3. Run
 
@@ -41,6 +40,16 @@ cd drive-access-clasp
 ```
 
 First run opens browser for Google login. After that, runs automatically.
+
+## For Other Users (Easy Deploy)
+
+Someone else wants to use this? They need to:
+
+1. **Clone this repo**
+2. **Create their own Google Cloud credentials** (see step 2 above)
+3. **Run `./setup.sh` then `./run.sh`**
+
+That's it. No shared credentials needed - each user creates their own.
 
 ## Features
 
@@ -69,7 +78,7 @@ python nuke_drive.py
 ## Troubleshooting
 
 **"Access blocked: This app's request is invalid"**
-→ Add yourself as a test user in OAuth consent screen
+→ Add yourself as a test user in Audience settings
 
 **"credentials.json not found"**
 → Download OAuth credentials from Google Cloud Console

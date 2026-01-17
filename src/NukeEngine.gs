@@ -19,30 +19,44 @@ function nukeAllSharing(continuationToken) {
     let files;
     if (continuationToken) {
       files = DriveApp.continueFileIterator(continuationToken);
+      addLiveLog('info', 'Resuming file processing...');
     } else {
       files = DriveApp.getFiles();
+      addLiveLog('info', 'Starting file scan...');
     }
 
     while (files.hasNext()) {
       // Check time limit
       if (isTimeUp(startTime)) {
         nextToken = files.getContinuationToken();
-        Logger.log('Time limit approaching, saving progress...');
+        addLiveLog('warning', 'Time limit reached, will resume shortly...');
         break;
       }
 
       const file = files.next();
+      const fileName = file.getName();
+      setCurrentFile(fileName);
+
       const result = nukeFilePermissions(file);
 
       filesProcessed++;
       permissionsRemoved += result.removed;
       errors += result.errors;
 
+      // Log significant events
+      if (result.removed > 0) {
+        addLiveLog('success', 'Removed ' + result.removed + ' permission(s) from: ' + fileName);
+      }
+      if (result.errors > 0) {
+        addLiveLog('error', 'Error processing: ' + fileName);
+      }
+
       rateLimitSleep();
     }
 
   } catch (e) {
     Logger.log('Error in nukeAllSharing: ' + e.toString());
+    addLiveLog('error', 'Critical error: ' + e.toString());
     errors++;
   }
 
@@ -138,29 +152,39 @@ function nukeAllFolderSharing(continuationToken) {
     let folders;
     if (continuationToken) {
       folders = DriveApp.continueFolderIterator(continuationToken);
+      addLiveLog('info', 'Resuming folder processing...');
     } else {
       folders = DriveApp.getFolders();
+      addLiveLog('info', 'Starting folder scan...');
     }
 
     while (folders.hasNext()) {
       if (isTimeUp(startTime)) {
         nextToken = folders.getContinuationToken();
-        Logger.log('Time limit approaching, saving folder progress...');
+        addLiveLog('warning', 'Time limit reached, will resume folders shortly...');
         break;
       }
 
       const folder = folders.next();
+      const folderName = folder.getName();
+      setCurrentFile(folderName + ' (folder)');
+
       const result = nukeFolderPermissions(folder);
 
       foldersProcessed++;
       permissionsRemoved += result.removed;
       errors += result.errors;
 
+      if (result.removed > 0) {
+        addLiveLog('success', 'Removed ' + result.removed + ' permission(s) from folder: ' + folderName);
+      }
+
       rateLimitSleep();
     }
 
   } catch (e) {
     Logger.log('Error in nukeAllFolderSharing: ' + e.toString());
+    addLiveLog('error', 'Folder error: ' + e.toString());
     errors++;
   }
 

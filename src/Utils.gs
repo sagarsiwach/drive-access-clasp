@@ -108,3 +108,72 @@ function deleteContinuationTrigger() {
     }
   });
 }
+
+// ==================== LIVE STATUS FOR SIDEBAR ====================
+
+const MAX_LOG_ENTRIES = 100;
+
+/**
+ * Get live status for sidebar polling
+ */
+function getLiveStatus() {
+  const stats = getStats();
+  const logs = JSON.parse(PROPS.getProperty('LIVE_LOGS') || '[]');
+
+  return {
+    status: PROPS.getProperty('NUKE_STATUS') || 'idle',
+    filesProcessed: stats.filesProcessed,
+    permissionsRemoved: stats.permissionsRemoved,
+    errors: stats.errors,
+    currentFile: PROPS.getProperty('CURRENT_FILE') || '',
+    totalFiles: parseInt(PROPS.getProperty('TOTAL_FILES') || '0'),
+    logs: logs
+  };
+}
+
+/**
+ * Add entry to live log (for sidebar display)
+ */
+function addLiveLog(type, message) {
+  const logs = JSON.parse(PROPS.getProperty('LIVE_LOGS') || '[]');
+  logs.push({
+    type: type,
+    message: message,
+    time: new Date().toISOString()
+  });
+
+  // Keep only last N entries to avoid property size limits
+  while (logs.length > MAX_LOG_ENTRIES) {
+    logs.shift();
+  }
+
+  PROPS.setProperty('LIVE_LOGS', JSON.stringify(logs));
+}
+
+/**
+ * Clear live log
+ */
+function clearLiveLog() {
+  PROPS.setProperty('LIVE_LOGS', '[]');
+}
+
+/**
+ * Set current processing status
+ */
+function setNukeStatus(status) {
+  PROPS.setProperty('NUKE_STATUS', status);
+}
+
+/**
+ * Set current file being processed
+ */
+function setCurrentFile(fileName) {
+  PROPS.setProperty('CURRENT_FILE', fileName);
+}
+
+/**
+ * Set total files count
+ */
+function setTotalFiles(count) {
+  PROPS.setProperty('TOTAL_FILES', String(count));
+}

@@ -16,11 +16,22 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('🔒 Drive Access Manager')
     .addItem('🚀 Start Nuclear Mode', 'startNuking')
-    .addItem('⏸️ Stop Processing', 'stopNuking')
+    .addItem('⏸️ Stop Processing', 'stopNuclearMode')
     .addSeparator()
-    .addItem('📊 View Progress', 'showProgress')
+    .addItem('📊 Open Live Monitor', 'showSidebar')
+    .addItem('📈 View Stats', 'showProgress')
     .addItem('🔄 Reset (Fresh Start)', 'resetEverything')
     .addToUi();
+}
+
+/**
+ * Show the live monitoring sidebar
+ */
+function showSidebar() {
+  const html = HtmlService.createHtmlOutputFromFile('Sidebar')
+    .setTitle('Nuclear Mode Monitor')
+    .setWidth(350);
+  SpreadsheetApp.getUi().showSidebar(html);
 }
 
 /**
@@ -50,16 +61,14 @@ function startNuking() {
   initStats();
   initSheets();
   setContinuationToken(null);
+  clearLiveLog();
+  setNukeStatus('running');
   PROPS.setProperty('PHASE', 'FILES'); // Start with files, then folders
 
-  ui.alert(
-    'Started!',
-    'Nuclear mode activated.\n\n' +
-    'The script will process files in the background.\n' +
-    'Check the "Stats" sheet for progress.\n' +
-    'You can close this tab - it will continue running.',
-    ui.ButtonSet.OK
-  );
+  // Show sidebar for live monitoring
+  showSidebar();
+
+  addLiveLog('info', 'Nuclear mode activated!');
 
   // Start processing
   createContinuationTrigger();
@@ -82,7 +91,7 @@ function continueNuking() {
       // Move to folders phase
       PROPS.setProperty('PHASE', 'FOLDERS');
       setContinuationToken(null);
-      Logger.log('Files complete, moving to folders...');
+      addLiveLog('info', 'Files complete! Moving to folders...');
     } else {
       setContinuationToken(result.nextToken);
     }
@@ -93,10 +102,14 @@ function continueNuking() {
       // All done!
       PROPS.setProperty('PHASE', 'COMPLETE');
       deleteContinuationTrigger();
+      setNukeStatus('idle');
+      setCurrentFile('');
       updateStatsSheet();
 
-      // Send email notification
       const stats = getStats();
+      addLiveLog('success', '🎉 Complete! Removed ' + stats.permissionsRemoved + ' permissions from ' + stats.filesProcessed + ' items');
+
+      // Send email notification
       MailApp.sendEmail({
         to: Session.getActiveUser().getEmail(),
         subject: '✅ Drive Nuclear Mode Complete',
@@ -115,6 +128,7 @@ function continueNuking() {
   } else if (phase === 'COMPLETE') {
     // Already done, just clean up trigger
     deleteContinuationTrigger();
+    setNukeStatus('idle');
     return;
   }
 
@@ -126,19 +140,28 @@ function continueNuking() {
 }
 
 /**
- * Stop processing
+ * Stop processing (called from menu)
  */
 function stopNuking() {
-  deleteContinuationTrigger();
-  updateStatsSheet();
-
+  stopNuclearMode();
   SpreadsheetApp.getUi().alert(
     'Stopped',
     'Processing has been stopped.\n\n' +
     'Progress has been saved. You can resume by clicking "Start Nuclear Mode" again ' +
     '(it will continue where it left off).',
-    ui.ButtonSet.OK
+    SpreadsheetApp.getUi().ButtonSet.OK
   );
+}
+
+/**
+ * Stop nuclear mode (can be called from sidebar)
+ */
+function stopNuclearMode() {
+  deleteContinuationTrigger();
+  setNukeStatus('stopped');
+  setCurrentFile('');
+  addLiveLog('warning', 'Processing stopped by user');
+  updateStatsSheet();
 }
 
 /**
