@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Google Sans', Arial, sans-serif;
+      font-size: 13px;
+      padding: 16px;
+      background: #f8f9fa;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      background: linear-gradient(135deg, #ea4335 0%, #c5221f 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .header h2 { font-size: 16px; font-weight: 500; }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .stat-box {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1a73e8;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #5f6368;
+      margin-top: 4px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .status-running { background: #e8f5e9; color: #1b5e20; }
+    .status-stopped { background: #fce4ec; color: #b71c1c; }
+    .status-idle { background: #e3f2fd; color: #1565c0; }
+    .log-container {
+      flex: 1;
+      background: #202124;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .log-header {
+      background: #303134;
+      padding: 8px 12px;
+      color: #9aa0a6;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .log-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 11px;
+    }
+    .log-entry {
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .log-info { background: #1e3a5f; color: #90caf9; }
+    .log-success { background: #1b4332; color: #81c784; }
+    .log-warning { background: #5d4037; color: #ffb74d; }
+    .log-error { background: #4a1c1c; color: #ef9a9a; }
+    .log-time { color: #9aa0a6; margin-right: 8px; }
+    .controls {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-stop {
+      background: #ea4335;
+      color: white;
+    }
+    .btn-stop:hover { background: #c5221f; }
+    .btn-clear {
+      background: #e8eaed;
+      color: #3c4043;
+    }
+    .btn-clear:hover { background: #dadce0; }
+    .progress-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: white;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Nuclear Mode</h2>
+    <span id="statusBadge" class="status-badge status-idle">Checking...</span>
+    <div class="progress-bar">
+      <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-box">
+      <div id="filesProcessed" class="stat-value">0</div>
+      <div class="stat-label">Files Processed</div>
+    </div>
+    <div class="stat-box">
+      <div id="permissionsRemoved" class="stat-value">0</div>
+      <div class="stat-label">Permissions Removed</div>
+    </div>
+    <div class="stat-box">
+      <div id="errorsCount" class="stat-value">0</div>
+      <div class="stat-label">Errors</div>
+    </div>
+    <div class="stat-box">
+      <div id="currentFile" class="stat-value" style="font-size: 11px; word-break: break-all;">-</div>
+      <div class="stat-label">Current File</div>
+    </div>
+  </div>
+
+  <div class="log-container">
+    <div class="log-header">Live Activity Log</div>
+    <div id="logContent" class="log-content"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-stop" onclick="stopNuke()">Stop</button>
+    <button class="btn-clear" onclick="clearLog()">Clear Log</button>
+  </div>
+
+  <script>
+    let lastLogIndex = 0;
+    let isPolling = true;
+
+    function formatTime(date) {
+      return new Date(date).toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    function addLogEntry(entry) {
+      const logContent = document.getElementById('logContent');
+      const div = document.createElement('div');
+      div.className = 'log-entry log-' + (entry.type || 'info');
+      div.innerHTML = '<span class="log-time">' + formatTime(entry.time) + '</span>' + entry.message;
+      logContent.appendChild(div);
+      logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    function updateStatus(data) {
+      // Update stats
+      document.getElementById('filesProcessed').textContent = data.filesProcessed || 0;
+      document.getElementById('permissionsRemoved').textContent = data.permissionsRemoved || 0;
+      document.getElementById('errorsCount').textContent = data.errors || 0;
+
+      // Update current file
+      const currentFile = data.currentFile || '-';
+      document.getElementById('currentFile').textContent =
+        currentFile.length > 30 ? currentFile.substring(0, 27) + '...' : currentFile;
+
+      // Update status badge
+      const badge = document.getElementById('statusBadge');
+      badge.className = 'status-badge status-' + (data.status || 'idle');
+      badge.textContent = (data.status || 'idle').charAt(0).toUpperCase() + (data.status || 'idle').slice(1);
+
+      // Update progress
+      if (data.totalFiles > 0) {
+        const pct = Math.round((data.filesProcessed / data.totalFiles) * 100);
+        document.getElementById('progressFill').style.width = pct + '%';
+      }
+
+      // Add new log entries
+      if (data.logs && data.logs.length > lastLogIndex) {
+        for (let i = lastLogIndex; i < data.logs.length; i++) {
+          addLogEntry(data.logs[i]);
+        }
+        lastLogIndex = data.logs.length;
+      }
+    }
+
+    function pollStatus() {
+      if (!isPolling) return;
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          if (data) updateStatus(data);
+          setTimeout(pollStatus, 1000);
+        })
+        .withFailureHandler(function(err) {
+          console.error(err);
+          setTimeout(pollStatus, 2000);
+        })
+        .getLiveStatus();
+    }
+
+    function stopNuke() {
+      google.script.run
+        .withSuccessHandler(function() {
+          addLogEntry({ type: 'warning', time: new Date(), message: 'Stop requested by user' });
+        })
+        .stopNuclearMode();
+    }
+
+    function clearLog() {
+      document.getElementById('logContent').innerHTML = '';
+      lastLogIndex = 0;
+      google.script.run.clearLiveLog();
+    }
+
+    // Start polling
+    pollStatus();
+    addLogEntry({ type: 'info', time: new Date(), message: 'Sidebar connected. Monitoring...' });
+  </script>
+</body>
+</html>

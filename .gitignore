@@ -4,6 +4,21 @@ node_modules/
 # CLASP credentials (NEVER commit these)
 .clasprc.json
 
+# Google OAuth credentials (NEVER commit these)
+credentials.json
+token.json
+
+# Python script state/logs
+nuke_state.json
+permission_removal_log.csv
+errors.csv
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
 # Environment files
 .env
 .env.local

@@ -1,100 +1,81 @@
-# Drive Access Manager
+# Drive Nuclear Mode
 
 Remove ALL sharing permissions from your entire Google Drive.
 
-## Overview
+## What It Does
 
-This tool removes all shared access from every file in a Google Drive account:
-- **"Anyone with link"** → Restricted
-- **All Editors** → Removed (except owner)
-- **All Viewers** → Removed (except owner)
+- Removes "Anyone with link" sharing → Makes files private
+- Removes all editors (except you)
+- Removes all viewers (except you)
+- Logs everything to CSV for audit trail
+- Handles 40k+ files with automatic resume
 
-Handles 40,000+ files with automatic batching, progress tracking, and full audit logging.
+## Quick Start
 
-## Current Implementation: Google Apps Script (CLASP)
-
-### Limitations
-
-| Issue | Impact |
-|-------|--------|
-| 6-minute execution limit | Requires trigger-based continuation |
-| Fragile state management | Progress stored in script properties |
-| Limited error handling | Basic retry logic only |
-| Hard to debug | Logger-only debugging |
-| Rate limiting | No exponential backoff |
-
-### Setup
+### 1. Clone and Setup
 
 ```bash
-# Install dependencies
-npm install
-
-# Login to Google (first time only)
-npx clasp login
-
-# Push code to Apps Script
-npm run push
-
-# Open the spreadsheet
-npm run open
+git clone <this-repo>
+cd drive-access-clasp
+./setup.sh
 ```
 
-### Usage
+### 2. Get Google Cloud Credentials
 
-1. Open the Google Sheet
-2. Click menu: **Drive Access Manager → Start Nuclear Mode**
-3. Confirm the warning dialog
-4. Check "Stats" sheet for progress
-5. Email notification when complete
+1. Go to [console.cloud.google.com](https://console.cloud.google.com/)
+2. Create new project → Name it anything
+3. **Enable API**: APIs & Services → Library → Search "Google Drive API" → Enable
+4. **OAuth Consent**: APIs & Services → OAuth consent screen
+   - Select "External" → Create
+   - App name: anything, emails: yours
+   - Scopes: Add `https://www.googleapis.com/auth/drive`
+   - Test users: Add your Gmail address
+5. **Create Credentials**: APIs & Services → Credentials
+   - Create OAuth client ID → Desktop app
+   - Download JSON → Save as `credentials.json` in this folder
 
-### Scripts
+### 3. Run
 
-| Command | Description |
+```bash
+./run.sh
+```
+
+First run opens browser for Google login. After that, runs automatically.
+
+## Features
+
+| Feature | Description |
 |---------|-------------|
-| `npm run push` | Push code to Apps Script |
-| `npm run pull` | Pull code from Apps Script |
-| `npm run open` | Open project in browser |
-| `npm run deploy` | Deploy the project |
+| **Resumable** | Press Ctrl+C anytime. Run again to continue where you left off |
+| **No timeouts** | Runs for hours if needed (unlike Apps Script) |
+| **Rate limiting** | Automatic retry with backoff on API limits |
+| **Full logging** | `permission_removal_log.csv` - every removed permission |
 
-## Planned: Node.js CLI (Recommended)
+## Output Files
 
-A more robust Node.js implementation is planned with:
+- `permission_removal_log.csv` - All removed permissions with timestamps
+- `errors.csv` - Any failures
+- `nuke_state.json` - Progress state (deleted when complete)
 
-- **Unlimited execution time** - No 6-minute limit
-- **Parallel processing** - Configurable concurrency
-- **Exponential backoff** - Proper rate limit handling
-- **Resumable progress** - Local file persistence
-- **Multi-account support** - Handle multiple Google accounts
-- **Real-time progress** - CLI output with progress bar
-
-### Authentication
-
-Uses OAuth2 - completely free:
-
-1. Create Google Cloud project (free)
-2. Enable Drive API (free, no billing required)
-3. Create OAuth credentials (Desktop App)
-4. Each user authenticates via browser once
-5. Token saved locally for future runs
-
-### Multi-Account Usage (Planned)
+## Manual Run (without scripts)
 
 ```bash
-# Authenticate accounts (one-time, opens browser)
-node nuke-drive.js auth --account friend1
-node nuke-drive.js auth --account friend2
-
-# Run cleanup
-node nuke-drive.js run --account friend1
-node nuke-drive.js run --account friend2
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python nuke_drive.py
 ```
 
-## OAuth Scopes Required
+## Troubleshooting
 
-- `drive` - Full Drive access to modify permissions
-- `spreadsheets` - Log results (Apps Script version)
-- `gmail.send` - Send completion notification
-- `script.scriptapp` - Create time-based triggers
+**"Access blocked: This app's request is invalid"**
+→ Add yourself as a test user in OAuth consent screen
+
+**"credentials.json not found"**
+→ Download OAuth credentials from Google Cloud Console
+
+**Stuck on a file**
+→ Check `errors.csv`, delete `nuke_state.json` to restart fresh
 
 ## Cost
 
@@ -106,19 +87,11 @@ node nuke-drive.js run --account friend2
 | Drive API | Free (no billing required) |
 | API Quota | 1 billion units/day |
 
-## Project Structure
+## Legacy: Apps Script Version
 
-```
-├── package.json           # Dependencies
-├── .clasp.json            # CLASP configuration
-├── src/
-│   ├── Code.gs            # Main entry point, menu
-│   ├── NukeEngine.gs      # Core permission removal
-│   ├── SheetLogger.gs     # Spreadsheet logging
-│   ├── Utils.gs           # Utility functions
-│   └── appsscript.json    # Apps Script manifest
-```
+The `src/` folder contains an Apps Script implementation, but it has limitations:
+- 6-minute execution timeout
+- Fragile state management
+- Limited error handling
 
-## License
-
-MIT
+Use the Python script instead.
